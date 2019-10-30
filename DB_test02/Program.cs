@@ -33,11 +33,16 @@ namespace DB_test02
         static void Main(string[] args)
         {
 
-            jsontest();
+            //example_jsontest();
             //sqltest();
+            //inserttest(); 
+            //searchUsrTest();
+            //getallTskTest();
+            //addtskTest();
+            takeTskTest();
         }
 
-        static void jsontest()
+        static void example_jsontest()
         {
             //for the frontend 
             //if you want to send message to the backend 
@@ -73,6 +78,104 @@ namespace DB_test02
         {
             return;
         }
+
+        static void inserttest()
+        {
+            SQLHandler sqlHandler = new SQLHandler();
+
+            inputMessage tmp = new inputMessage();
+            tmp.way = "addUsr";
+            tmp.argument.Add("name", "wo shi shabi");
+            tmp.argument.Add("pwd", "wsl");
+            string msgIn = JsonConvert.SerializeObject(tmp);
+            string msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+            msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+        }
+    
+    
+        static void searchUsrTest()
+        {
+            SQLHandler sqlHandler = new SQLHandler();
+
+            inputMessage tmp = new inputMessage();
+            tmp.way = "searchUsr";
+            tmp.argument.Add("name", "wo shi shabi");
+            tmp.argument.Add("pwd", "wsl");
+            string msgIn = JsonConvert.SerializeObject(tmp);
+            string msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+            tmp.argument["name"] = "wo shi shabi";
+            tmp.argument["pwd"] = "wnd";
+            msgIn = JsonConvert.SerializeObject(tmp);
+            msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+
+            tmp.argument["name"] = "wo shi ni baba";
+            tmp.argument["pwd"] = "wnd";
+            msgIn = JsonConvert.SerializeObject(tmp);
+            msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+            tmp = new inputMessage();
+            tmp.way = "searchUsr";
+            tmp.argument.Add("name", "wo shi shabi");
+            msgIn = JsonConvert.SerializeObject(tmp);
+            msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+        }
+        
+        static void getallTskTest()
+        {
+            SQLHandler sqlHandler = new SQLHandler();
+
+            inputMessage tmp = new inputMessage();
+            tmp.way = "getallTsk";
+            string msgIn = JsonConvert.SerializeObject(tmp);
+            string msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+        }
+    
+
+        static void addtskTest()
+        {
+            SQLHandler sqlHandler = new SQLHandler();
+
+            inputMessage tmp = new inputMessage();
+            tmp.way = "addTsk";
+            tmp.argument.Add("title", "wo shi shabi");
+            tmp.argument.Add("content", "wsl");
+            tmp.argument.Add("coin", "123");
+            tmp.argument.Add("owner", "wo shi ni yeye");
+            string msgIn = JsonConvert.SerializeObject(tmp);
+            string msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+            msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+        }
+    
+        static void takeTskTest()
+        {
+            SQLHandler sqlHandler = new SQLHandler();
+
+            inputMessage tmp = new inputMessage();
+            tmp.way = "takeTsk";
+            tmp.argument.Add("id", "5");
+            tmp.argument.Add("taker", "yeye");
+            string msgIn = JsonConvert.SerializeObject(tmp);
+            string msgOut = sqlHandler.recvMsg(msgIn);
+            Console.WriteLine(msgOut);
+
+        }
+
+
     }
 
 
@@ -87,7 +190,7 @@ namespace DB_test02
         {
             // 数据库
             MySqlConnection sqlConn;
-            string connStr = "Database=test;Data Source=127.0.0.1;User Id=root;Password=0129;port=3306";
+            string connStr = "Database=test;Data Source=127.0.0.1;User Id=root;Password=3358;port=3306";
             sqlConn = new MySqlConnection(connStr);
             return sqlConn;
         }
@@ -105,18 +208,23 @@ namespace DB_test02
             {
                 case "addUsr":
                     optMessage.lst["result"]["way"] = "addUsr";
+                    return addUsr(msg);
                     break;
                 case "searchUsr":
                     optMessage.lst["result"]["way"] = "searchUsr";
+                    return searchUsr(msg);
                     break;
                 case "getallTsk":
                     optMessage.lst["result"]["way"] = "getallTsk";
+                    return getallTsk(msg);
                     break;
                 case "addTsk":
                     optMessage.lst["result"]["way"] = "addTsk";
+                    return addTsk(msg);
                     break;
                 case "takeTsk":
                     optMessage.lst["result"]["way"] = "takeTsk";
+                    return takeTsk(msg);
                     break;
                 default:
                     optMessage.success = false;
@@ -255,6 +363,16 @@ namespace DB_test02
                 return JsonConvert.SerializeObject(output);
             }
 
+            Boolean exitCheck = checkUsrExist(name);
+
+            if(exitCheck)
+            {
+                output.success = false;
+                output.ErrorMessage = "Sorry Already Exits";
+                return JsonConvert.SerializeObject(output);
+            }
+
+
             try
             {
                 output.success = true;
@@ -274,8 +392,49 @@ namespace DB_test02
                 output.ErrorMessage = "INSERT INTO Usr may can not work / Invalid input by name , pwd";
             }
 
+            exitCheck = checkUsrExist(name);
+            if (!exitCheck)
+            {
+                output.success = false;
+                output.ErrorMessage = "Sorry, Unable to login, please try again";
+            }
+            else
+            {
+                output.lst["result"] = new Dictionary<string, string>();
+                output.lst["result"]["name"] = name;
+                output.lst["result"]["pwd"] = pwd;
+                output.lst["result"]["exp"] = "0";
+                output.lst["result"]["coin"] = "100";
+            }
+
+
+
             return JsonConvert.SerializeObject(output);
 
+        }
+
+        /*
+         * a helper function to check User exist or not 
+         * for before the insert , and after the insert. 
+         */
+        private Boolean checkUsrExist(string name)
+        {
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "SELECT * FROM usr where name=@name;";
+            MySqlCommand findUsr = new MySqlCommand(strUsr, sqlConn);
+            findUsr.Parameters.AddWithValue("@name", name);
+            MySqlDataReader resUsr = findUsr.ExecuteReader();
+            resUsr.Read();
+
+            if (resUsr.HasRows)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
 
@@ -303,8 +462,19 @@ namespace DB_test02
             inputMessage input = JsonConvert.DeserializeObject<inputMessage>(msg);
             outputMessage output = new outputMessage();
 
-            string name = input.argument["name"];
-            string pwd = input.argument["pwd"];
+            string name = "null";
+            string pwd = "null";
+
+            try
+            {
+                name = input.argument["name"];
+                pwd = input.argument["pwd"];
+            } catch( Exception ex)
+            {
+                output.success = false;
+                output.ErrorMessage = "name/pwd cannot be empty, Please try again";
+                return JsonConvert.SerializeObject(output);
+            }
 
             MySqlConnection sqlConn = GetSqlConn();
             try
@@ -402,7 +572,7 @@ namespace DB_test02
 
             try
             {
-                String strsql = "SELECT * FROM tsk WHERE taker != NULL;";
+                String strsql = "SELECT * FROM tsk WHERE taker IS NULL;";
                 MySqlCommand sqlComm = new MySqlCommand(strsql, sqlConn);
                 MySqlDataReader sqlRes = sqlComm.ExecuteReader();
 
@@ -441,7 +611,7 @@ namespace DB_test02
         }
 
 
-
+        //TODO: Import decide ADDUSR and ADDTSK's return value 
         /*
          * string addTsk(string msg)
          * 
@@ -479,10 +649,22 @@ namespace DB_test02
                 return JsonConvert.SerializeObject(output);
             }
 
-            string title = input.argument["title"];
-            string content = input.argument["content"];
-            string coin = input.argument["coin"];
-            string owner = input.argument["owner"];
+            string title, content, owner;
+            int coin; 
+
+            try
+            {
+                title = input.argument["title"];
+                content = input.argument["content"];
+                coin = Convert.ToInt32(input.argument["coin"]) ;
+                owner = input.argument["owner"];
+            }
+            catch(Exception e)
+            {
+                output.ErrorMessage = "addTsk: Invalid input please re-enter";
+                output.success = false;
+                return JsonConvert.SerializeObject(output);
+            }
 
             try
             {
@@ -507,6 +689,28 @@ namespace DB_test02
                 output.ErrorMessage = "INSERT INTO Tsk may can not work";
             }
             return JsonConvert.SerializeObject(output);
+        }
+
+        public int find_id(string title, string content, string owner, int coin)
+        {
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "SELECT * FROM tsk WHERE title=@title AND content=@content AND coin= @coin AND owner= @owner);";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@title", title);
+            instUsr.Parameters.AddWithValue("@content", content);
+            instUsr.Parameters.AddWithValue("@coin", coin);
+            instUsr.Parameters.AddWithValue("@owner", owner);
+
+            MySqlDataReader sqlRes = instUsr.ExecuteReader();
+            
+            while (sqlRes.Read())
+            {
+                int id = (int)sqlRes["id"];
+                return id; 
+            }
+
+            return -1; 
         }
 
         /*
@@ -544,7 +748,7 @@ namespace DB_test02
                 return JsonConvert.SerializeObject(output);
             }
 
-            string id = input.argument["id"];
+            int id = Convert.ToInt32(input.argument["id"]) ;
             string taker = input.argument["taker"];
 
 
