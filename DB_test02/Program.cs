@@ -20,11 +20,25 @@ namespace DB_test02
             //searchUsrTest();
             //getallTskTest();
             //addtskTest();
-            //takeTskTest();
+            takeTskTest();
             //findbyIdTest();
             //deleteIdTest();
-            finishTskTest();
+            //finishTskTest();
+            
+        }
 
+        public static void takeTskTest()
+        {
+            inputMessage iptMsg = new inputMessage();
+            iptMsg.addWay("takeTsk");
+            iptMsg.addArg("id", "2");
+            iptMsg.addArg("taker", "nihao");
+            SQLHandler sql = new SQLHandler();
+            string output = sql.recvMsg(iptMsg.getString());
+
+
+            Console.WriteLine(output);
+            return;
         }
 
         public static void  finishTskTest()
@@ -961,6 +975,19 @@ inputMessage:
                 return output.getString();
             }
 
+            Console.WriteLine("check the taker");
+            string opt = getDetailsTsk(input.getArg("id"));
+            outputMessage optMsg = new outputMessage(opt);
+            Dictionary<string, Dictionary<string, string>> resultId = optMsg.getResult();
+            string takerNow = resultId["0"]["taker"];
+            if (!takerNow.Equals("None_taker"))
+            {
+                output.addSuccess(false);
+                output.addErrorMsg("We have already have someone to take the story");
+                return output.getString();
+            }
+
+
 
 
 
@@ -1039,8 +1066,27 @@ inputMessage:
 
         public string getDetailsTsk(string id_)
         {
-            return "hello";
+            MySqlConnection sqlConn = GetSqlConn();
+            outputMessage opt = new outputMessage();
+            Dictionary<string, string> result = new Dictionary<string, string>();
+            sqlConn.Open();
+            String strUsr = "SELECT * FROM tsk WHERE id =@id;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@id", id_);
+            MySqlDataReader sqlRes = instUsr.ExecuteReader();
 
+            while (sqlRes.Read())
+            {
+                try { result["id"] = (string)sqlRes["id"]; } catch (Exception e) { result["id"] = "None_id"; }
+                try { result["title"] = (string)sqlRes["title"]; } catch (Exception e) { result["title"] = "None_title"; }
+                try { result["content"] = (string)sqlRes["content"]; } catch (Exception e) { result["content"] = "None_content"; }
+                try { result["coin"] = (string)sqlRes["coin"]; } catch (Exception e) { result["content"] = "None_coin"; }
+                try { result["exp"] = (string)sqlRes["exp"]; } catch (Exception e) { result["exp"] = "None_exp"; }
+                try { result["owner"] = (string)sqlRes["owner"]; } catch (Exception e) { result["owner"] = "None_owner"; }
+                try { result["taker"] = (string)sqlRes["taker"]; } catch (Exception e) { result["taker"] = "None_taker"; }
+            }
+            opt.addResult(result);
+            return opt.getString();
         }
 
         /// <summary>
@@ -1086,6 +1132,18 @@ inputMessage:
             string id_ = input.getArg("id");
             int id = Convert.ToInt32(id_);
             string owner = getOwner8id(id_);
+            string opt = getDetailsTsk(id_);
+
+            outputMessage optMsg = new outputMessage(opt);
+            Dictionary<string, Dictionary<string, string>> resultId = optMsg.getResult();
+            string takerNow = resultId["0"]["taker"];
+
+            if (!takerNow.Equals("None_taker"))
+            {
+                output.addSuccess(false);
+                output.addErrorMsg("We have already have someone to take the story");
+                return output.getString();
+            }
 
             Tuple<int, int> CoinExp = getTsk8id(id_);
             int coin = CoinExp.Item1;
@@ -1097,6 +1155,7 @@ inputMessage:
             deleteTsk(id_);
 
             output.addSuccess(true);
+
             return output.getString();
         }
 
