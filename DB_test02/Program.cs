@@ -2,32 +2,13 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using System.IO;
+
 
 namespace DB_test02
 {
-    public class outputMessage
-    {
-        public Boolean success;
-        public string ErrorMessage;
-        public Dictionary<string, Dictionary<string, string>> lst;
-
-        public outputMessage()
-        {
-            this.lst = new Dictionary<string, Dictionary<string, string>>();
-        }
-    }
-
-    public class inputMessage
-    {
-        public string way;
-        public Dictionary<string, string> argument;
-
-        public inputMessage()
-        {
-            this.argument = new Dictionary<string, string>();
-        }
-    }
-
+ 
     class ProgramM
     {
         static void Main(string[] args)
@@ -39,153 +20,195 @@ namespace DB_test02
             //searchUsrTest();
             //getallTskTest();
             //addtskTest();
-            takeTskTest();
+            //takeTskTest();
+            //findbyIdTest();
+            //deleteIdTest();
+            finishTskTest();
+
         }
 
-        static void example_jsontest()
+        public static void  finishTskTest()
         {
-            //for the frontend 
-            //if you want to send message to the backend 
-            //(1) create Message
-            inputMessage tmp = new inputMessage();
+            inputMessage iptMsg = new inputMessage();
+            iptMsg.addWay("finishTsk");
+            iptMsg.addArg("name", "shabi");
+            iptMsg.addArg("id", "1");
 
-            //(2) addValue <PLEASE FOLLOW THE COMMENT FOR EACH FUNCTION, it specifies each inputMessage>
-            tmp.way = "addUsr";
-            tmp.argument.Add("name", "wo shi shabi");
-            tmp.argument.Add("pwd", "wsl");
+            SQLHandler sql = new SQLHandler();
+            string output = sql.recvMsg(iptMsg.getString());
+            
 
+            Console.WriteLine(output);
+            return; 
 
-            //(3) Synchronization and send to server
-            string msg = JsonConvert.SerializeObject(tmp);
-
-            SQLHandler sqlHandler = new SQLHandler();
-
-            // server.sendMessage(msg); 
-
-            //(4) get result
-            // string msg = getMessageFromServer(msg);
-            msg = sqlHandler.recvMsg(msg);
-            outputMessage output = JsonConvert.DeserializeObject<outputMessage>(msg);
-
-
-            //(5) see the result
-            Console.WriteLine(output.lst["result"]["way"]);
 
 
         }
-
-        static void sqltest()
-        {
-            return;
-        }
-
-        static void inserttest()
-        {
-            SQLHandler sqlHandler = new SQLHandler();
-
-            inputMessage tmp = new inputMessage();
-            tmp.way = "addUsr";
-            tmp.argument.Add("name", "wo shi shabi");
-            tmp.argument.Add("pwd", "wsl");
-            string msgIn = JsonConvert.SerializeObject(tmp);
-            string msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-            msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-        }
-    
-    
-        static void searchUsrTest()
-        {
-            SQLHandler sqlHandler = new SQLHandler();
-
-            inputMessage tmp = new inputMessage();
-            tmp.way = "searchUsr";
-            tmp.argument.Add("name", "wo shi shabi");
-            tmp.argument.Add("pwd", "wsl");
-            string msgIn = JsonConvert.SerializeObject(tmp);
-            string msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-            tmp.argument["name"] = "wo shi shabi";
-            tmp.argument["pwd"] = "wnd";
-            msgIn = JsonConvert.SerializeObject(tmp);
-            msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-
-            tmp.argument["name"] = "wo shi ni baba";
-            tmp.argument["pwd"] = "wnd";
-            msgIn = JsonConvert.SerializeObject(tmp);
-            msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-            tmp = new inputMessage();
-            tmp.way = "searchUsr";
-            tmp.argument.Add("name", "wo shi shabi");
-            msgIn = JsonConvert.SerializeObject(tmp);
-            msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-        }
-        
-        static void getallTskTest()
-        {
-            SQLHandler sqlHandler = new SQLHandler();
-
-            inputMessage tmp = new inputMessage();
-            tmp.way = "getallTsk";
-            string msgIn = JsonConvert.SerializeObject(tmp);
-            string msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-        }
-    
-
-        static void addtskTest()
-        {
-            SQLHandler sqlHandler = new SQLHandler();
-
-            inputMessage tmp = new inputMessage();
-            tmp.way = "addTsk";
-            tmp.argument.Add("title", "wo shi shabi");
-            tmp.argument.Add("content", "wsl");
-            tmp.argument.Add("coin", "123");
-            tmp.argument.Add("owner", "wo shi ni yeye");
-            string msgIn = JsonConvert.SerializeObject(tmp);
-            string msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-            msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-        }
-    
-        static void takeTskTest()
-        {
-            SQLHandler sqlHandler = new SQLHandler();
-
-            inputMessage tmp = new inputMessage();
-            tmp.way = "takeTsk";
-            tmp.argument.Add("id", "5");
-            tmp.argument.Add("taker", "yeye");
-            string msgIn = JsonConvert.SerializeObject(tmp);
-            string msgOut = sqlHandler.recvMsg(msgIn);
-            Console.WriteLine(msgOut);
-
-        }
-
 
     }
 
 
+/**
+outputMessage:
 
-
-    public class SQLHandler
+*/
+public class outputMessage
     {
+        private JObject optJson;
+        private JObject rstJson;
+        private int index;
+        public void addSuccess(Boolean success)
+        {
+            optJson.Add("success", success);
+        }
+
+        public void addErrorMsg(string reason)
+        {
+            optJson.Add("ErrorMessage", reason);
+        }
+
+        public void addResult(Dictionary<string, string> value)
+        {
+            JObject tmp = new JObject();
+            foreach (KeyValuePair<string, string> itr in value)
+            {
+                tmp.Add(itr.Key, itr.Value);
+            }
+
+            rstJson.Add(index.ToString(), tmp);
+            index++;
+        }
+
+        public Boolean getSuccess()
+        {
+            return optJson["success"].Value<Boolean>();
+        }
+
+        public string getErrorMsg()
+        {
+            return optJson["ErrorMessage"].Value<string>();
+        }
+
+        public Dictionary<String, Dictionary<String, String>> getResult()
+        {
+            Dictionary<String, Dictionary<String, String>> result = new Dictionary<string, Dictionary<string, string>>();
+            int index = optJson["number"].Value<int>();
+
+            for (int i = 0; i < index; i++)
+            {
+                var tmpJson = rstJson[i.ToString()].ToString();
+                Dictionary<string, string> tmpDict = new Dictionary<string, string>();
+
+                JsonTextReader tmpReader = new JsonTextReader(new StringReader(tmpJson));
+
+                tmpReader.Read();
+
+                while (tmpReader.Read())
+                {
+                    if (tmpReader.Value == null)
+                        continue;
+                    String key = tmpReader.Value.ToString();
+                    tmpReader.Read();
+                    String value = tmpReader.Value.ToString();
+                    tmpDict[key] = value;
+                }
+                result.Add(i.ToString(), tmpDict);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Make the outputMessage to string type Json form 
+        /// </summary>
+        /// <returns></returns>
+        public string getString()
+        {
+            optJson.Add("number", index);
+            optJson.Add("result", rstJson);
+            return optJson.ToString();
+        }
+
+        public outputMessage()
+        {
+            optJson = new JObject();
+            rstJson = new JObject();
+            index = 0;
+        }
+
+        /// <summary>
+        /// Load the string type Json Type to its real form 
+        /// </summary>
+        /// <param name="msg"></param>
+        public outputMessage(string msg)
+        {
+            optJson = JObject.Parse(msg);
+            rstJson = optJson["result"].Value<JObject>();
+            index = optJson["number"].Value<int>();
+        }
+    }
+
+    /**
+inputMessage:
+(1) addWay(string method): method->addUsr
+(2) addArg(string argument, string value)
+(3) getString(): return the string (which is a json object); 
+(4) getWay(): return the way
+(5) getArg(string arg): return the specific argument 
+*/
+    public class inputMessage
+    {
+        private JObject iptJson;
+        private JObject argJson;
+
+        public void addWay(string method)
+        {
+            iptJson.Add("way", method);
+        }
+
+        public void addArg(string name, string value)
+        {
+            argJson.Add(name, value);
+        }
+
+        public string getString()
+        {
+            iptJson.Add("argument", argJson);
+            return iptJson.ToString();
+        }
+
+        public string getWay()
+        {
+            return iptJson["way"].Value<string>();
+        }
+
+        public string getArg(string arg)
+        {
+            return argJson[arg].Value<string>();
+        }
+
+        public inputMessage()
+        {
+            iptJson = new JObject();
+            argJson = new JObject();
+        }
+
+        public inputMessage(string strJson)
+        {
+            iptJson = JObject.Parse(strJson);
+            argJson = iptJson["argument"].Value<JObject>();
+        }
+    }
+
+
+    public class SQLHandler 
+    {
+        //public PlayerIndicator playerIndicator;
         /// <summary>
         /// 建立数据库连接
         /// </summary>
+        /// 
+
         public MySqlConnection GetSqlConn()
         {
             // 数据库
@@ -195,71 +218,83 @@ namespace DB_test02
             return sqlConn;
         }
 
-        public string recvMsg(string msg)
-        {
-            inputMessage iptMessage = JsonConvert.DeserializeObject<inputMessage>(msg);
-            string way = iptMessage.way;
-
-            outputMessage optMessage = new outputMessage();
-            optMessage.success = true;
-            optMessage.lst["result"] = new Dictionary<string, string>();
-
-            switch (way)
-            {
-                case "addUsr":
-                    optMessage.lst["result"]["way"] = "addUsr";
-                    return addUsr(msg);
-                    break;
-                case "searchUsr":
-                    optMessage.lst["result"]["way"] = "searchUsr";
-                    return searchUsr(msg);
-                    break;
-                case "getallTsk":
-                    optMessage.lst["result"]["way"] = "getallTsk";
-                    return getallTsk(msg);
-                    break;
-                case "addTsk":
-                    optMessage.lst["result"]["way"] = "addTsk";
-                    return addTsk(msg);
-                    break;
-                case "takeTsk":
-                    optMessage.lst["result"]["way"] = "takeTsk";
-                    return takeTsk(msg);
-                    break;
-                default:
-                    optMessage.success = false;
-                    optMessage.ErrorMessage = "unable to match the way";
-                    break;
-            }
-            return JsonConvert.SerializeObject(optMessage);
-
-        }
-
         /// <summary>
         /// Opens the sql.
         /// </summary>
         public void OpenSql()
         {
-            jsontest();
-            // 数据库
+
+            connectTest();
+        }
+
+        public void connectTest()
+        {
             MySqlConnection sqlConn = GetSqlConn();
             try
             {
                 sqlConn.Open();
-                Console.WriteLine("NO ERROR!!!!!!!Connection success!");
+                Console.WriteLine("suppose to set up the table");
             }
             catch (Exception ex)
             {
-                Console.Write(ex.Message);
-                Console.WriteLine("ERROR!!!!!!");
+                Console.WriteLine(ex.Message);
                 return;
             }
-
-
         }
 
-        public void jsontest()
+
+        public static void JsonObjectTest()
         {
+            inputMessage iptMsg = new inputMessage();
+            iptMsg.addWay("searchUsr");
+            iptMsg.addArg("name", "test");
+            iptMsg.addArg("pwd", "pwd");
+
+            string msg = iptMsg.getString();
+            Console.WriteLine(msg);
+
+            inputMessage transMsg = new inputMessage(msg);
+            string way = transMsg.getWay();
+            string argName = transMsg.getArg("name");
+            string argPwd = transMsg.getArg("pwd");
+
+            Console.WriteLine(string.Format("\n\n name {0} pwd {1} way {2}", argName, argPwd, way));
+        }
+
+        public void sqlTest()
+        {
+            Console.WriteLine(">>>>>>>>>>>>>testing    searchUsr>>>>>>>>>>>>>>>\n");
+            inputMessage ipt = new inputMessage();
+            ipt.addWay("searchUsr");
+            ipt.addArg("name", "test");
+            ipt.addArg("pwd", "pwd");
+
+            string msg = ipt.getString();
+            string opt = recvMsg(msg);
+
+            Console.WriteLine("\n\n" + opt + "\n\n");
+
+            outputMessage optMsg = new outputMessage(opt);
+            if (optMsg.getSuccess())
+            {
+                var result = optMsg.getResult();
+
+                foreach (KeyValuePair<string, Dictionary<string, string>> itr in result)
+                {
+                    string ans = itr.Key + "\n";
+
+                    foreach (KeyValuePair<string, string> subitr in itr.Value)
+                    {
+                        ans += subitr.Key + "  " + subitr.Value + "\n";
+                    }
+
+                    Console.WriteLine(ans);
+                }
+            }
+            else
+            {
+                Console.WriteLine("we have some error " + optMsg.getErrorMsg());
+            }
 
         }
 
@@ -268,8 +303,8 @@ namespace DB_test02
         ///  (X) Two databse: (do the check first and then set up the database structure)
         ///  user
         ///  task
-        ///  (X) addUsr()
-        ///  (X) searchUsr()
+        ///  (X) addUsr(String name, String pwd)
+        ///  (X) searchUsr(String name, String pwd)
         ///  () addCoin(String name, int coin)
         ///  () addExp(Strig name, int exp)
         ///  () losCoin(String name, int coin)
@@ -280,6 +315,39 @@ namespace DB_test02
         ///  
         /// </summary>
         /// 
+
+        public string recvMsg(string msg)
+        {
+            outputMessage optMessage = new outputMessage();
+            inputMessage iptMessage = new inputMessage(msg);
+
+            string way = iptMessage.getWay();
+            switch (way)
+            {
+                case "addUsr":
+                    return addUsr(msg);
+                case "searchUsr":
+                    return searchUsr(msg);
+                case "getallTsk":
+                    return getallTsk(msg);
+                case "addTsk":
+                    return addTsk(msg);
+                case "takeTsk":
+                    return takeTsk(msg);
+                case "finishTsk":
+                    return finishTsk(msg);
+                case "getAcceptedTsk":
+                    return getAcceptedTsk(msg);
+                default:
+                    optMessage.addSuccess(false);
+                    optMessage.addErrorMsg("unable to match the way");
+                    break;
+            }
+            return optMessage.getString();
+        }
+
+
+
 
         public void setTable()
         {
@@ -322,32 +390,22 @@ namespace DB_test02
 
         }
 
-
-
         /*
-         * string addUsr(string msg)
-         * 
-         * input msg is actually a inputMessage(I will do the serialize part): 
-         * way: "addUsr"
-         * argument [it is a dictionary]:
-         *  key(string) : value(string)
-         *  "name"       : "shabi"
-         *  "pwd"       : "wo si le"
-         * 
-         * 
-         * output msg(string)
-         * 
-         * success: True (addSuccess) / False (add doesn't success)
-         * ErrorMessage (if False) : will have the reason why it is false; 
-         * lst (if success)  : lst["result"] = a dictionary: {"name":"shabi", "pwd":"zhe shi mi ma", "coin":"100", "exp": "0"}
-         *     (False : null):
-         */
+        * string addUsr(string msg)
+        * input msg (inputMessage)
+        * way: addUsr<getWay()>
+        * arg: name (getArg("name"))  / pwd (getArg("pwd"))
+        * 
+        * output outpuMessage(string) 
+        * success: True (addSuccess) / False (add doesn't success)
+        * ErrorMessage (if False) : will have the reason why it is false); 
+        */
         public string addUsr(string msg)
         {
-            inputMessage input = JsonConvert.DeserializeObject<inputMessage>(msg);
+            inputMessage input = new inputMessage(msg);
             outputMessage output = new outputMessage();
-            string name = input.argument["name"];
-            string pwd = input.argument["pwd"];
+            string name = input.getArg("name");
+            string pwd = input.getArg("pwd");
 
             MySqlConnection sqlConn = GetSqlConn();
             try
@@ -358,24 +416,23 @@ namespace DB_test02
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                output.ErrorMessage = "addUsr: Connection between mysql doesn't work correctly";
-                output.success = false;
-                return JsonConvert.SerializeObject(output);
+                output.addErrorMsg("addUsr: Connection between mysql doesn't work correctly");
+                output.addSuccess(false);
+                return output.getString();
             }
 
             Boolean exitCheck = checkUsrExist(name);
 
-            if(exitCheck)
+            if (exitCheck)
             {
-                output.success = false;
-                output.ErrorMessage = "Sorry Already Exits";
-                return JsonConvert.SerializeObject(output);
+                output.addSuccess(false);
+                output.addErrorMsg("Sorry Already Exits");
+                return output.getString();
             }
 
 
             try
             {
-                output.success = true;
                 String strUsr = "INSERT usr(name , pwd) VALUES (@name, @pwd);";
                 MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
                 instUsr.Parameters.AddWithValue("@name", name);
@@ -388,28 +445,23 @@ namespace DB_test02
                 sqlConn.Close();
                 Console.WriteLine("INSERT INTO Usr may can not work");
                 Console.WriteLine(ex.Message);
-                output.success = false;
-                output.ErrorMessage = "INSERT INTO Usr may can not work / Invalid input by name , pwd";
+                output.addSuccess(false);
+                output.addErrorMsg("INSERT INTO Usr may can not work / Invalid input by name , pwd");
+                return output.getString();
             }
 
             exitCheck = checkUsrExist(name);
             if (!exitCheck)
             {
-                output.success = false;
-                output.ErrorMessage = "Sorry, Unable to login, please try again";
+                output.addSuccess(false);
+                output.addErrorMsg("Sorry, Unable to login, please try again");
             }
             else
             {
-                output.lst["result"] = new Dictionary<string, string>();
-                output.lst["result"]["name"] = name;
-                output.lst["result"]["pwd"] = pwd;
-                output.lst["result"]["exp"] = "0";
-                output.lst["result"]["coin"] = "100";
+                output.addSuccess(true);
             }
 
-
-
-            return JsonConvert.SerializeObject(output);
+            return output.getString();
 
         }
 
@@ -453,28 +505,19 @@ namespace DB_test02
          * Defining success: there is a user 
          *          false  : (1)there is no such a usr (2) the pwd is not correct  
          * success: True (search Success) / False (search doesn't success)
-         * ErrorMessage (if False) : will have the reason why it is false; 
+         * ErrorMessage (if False) : will have the reason why it is false); 
          * lst (if success)  : lst["result"] = a dictionary: {"name":"shabi", "pwd":"zhe shi mi ma", "coin":"#", "exp": "#"}
          *     (False : null):
          */
         public string searchUsr(string msg)
         {
-            inputMessage input = JsonConvert.DeserializeObject<inputMessage>(msg);
+            inputMessage input = new inputMessage(msg);
             outputMessage output = new outputMessage();
 
             string name = "null";
             string pwd = "null";
 
-            try
-            {
-                name = input.argument["name"];
-                pwd = input.argument["pwd"];
-            } catch( Exception ex)
-            {
-                output.success = false;
-                output.ErrorMessage = "name/pwd cannot be empty, Please try again";
-                return JsonConvert.SerializeObject(output);
-            }
+
 
             MySqlConnection sqlConn = GetSqlConn();
             try
@@ -485,9 +528,21 @@ namespace DB_test02
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                output.ErrorMessage = "searchUsr: Connection between mysql doesn't work correctly";
-                output.success = false;
-                return JsonConvert.SerializeObject(output);
+                output.addErrorMsg("addUsr: Connection between mysql doesn't work correctly" + ex.ToString());
+                output.addSuccess(false);
+                return output.getString();
+            }
+
+            try
+            {
+                name = input.getArg("name");
+                pwd = input.getArg("pwd");
+            }
+            catch (Exception ex)
+            {
+                output.addSuccess(false);
+                output.addErrorMsg("name/pwd cannot be empty, Please try again");
+                return output.getString();
             }
 
 
@@ -502,58 +557,124 @@ namespace DB_test02
                 {
                     if (pwd.Equals(resUsr["pwd"]))
                     {
-                        output.success = true;
-                        output.lst["result"] = new Dictionary<string, string>();
-                        output.lst["result"]["name"] = resUsr["name"].ToString();
-                        output.lst["result"]["pwd"] = resUsr["pwd"].ToString();
-                        output.lst["result"]["coin"] = resUsr["coin"].ToString();
-                        output.lst["result"]["exp"] = resUsr["exp"].ToString();
+                        var lst = new Dictionary<string, string>();
+                        lst.Add("name", resUsr["name"].ToString());
+                        lst.Add("pwd", resUsr["pwd"].ToString());
+                        lst.Add("coin", resUsr["coin"].ToString());
+                        lst.Add("exp", resUsr["exp"].ToString());
+
+                        output.addResult(lst);
+                        output.addSuccess(true);
                     }
                     else
                     {
-                        output.success = false;
-                        output.ErrorMessage = "Wrong password, please try again";
+                        output.addSuccess(false);
+                        output.addErrorMsg("Wrong password, please try again");
 
                     }
 
-                    return JsonConvert.SerializeObject(output);
+                    return output.getString();
                 }
                 else
                 {
                     sqlConn.Close();
-                    output.success = false;
-                    output.ErrorMessage = "Cannot find the usr, please re-enter";
-                    return JsonConvert.SerializeObject(output);
+                    output.addSuccess(false);
+                    output.addErrorMsg("Cannot find the usr, please re-enter");
+                    return output.getString();
                 }
             }
             catch (Exception ex)
             {
                 sqlConn.Close();
 
-                output.success = false;
-                output.ErrorMessage = "searchUsr has some problem, please try again or ask Developer about that";
-                return JsonConvert.SerializeObject(output);
+                output.addSuccess(false);
+                output.addErrorMsg("searchUsr has some problem, please try again or ask Developer about that");
+                return output.getString();
             }
         }
+
+        public string getCoin(string name)
+        {
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "SELECT coin FROM usr WHERE name =@name;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@name", name);
+            MySqlDataReader sqlRes = instUsr.ExecuteReader();
+
+            while (sqlRes.Read())
+            {
+                String coin = (String)sqlRes["coin"];
+                return coin;
+            }
+
+            return "-2333";
+
+        }
+
+        public string getExp(string name)
+        {
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "SELECT exp FROM usr WHERE name =@name;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@name", name);
+            MySqlDataReader sqlRes = instUsr.ExecuteReader();
+
+            while (sqlRes.Read())
+            {
+                String exp = (String)sqlRes["exp"];
+                return exp;
+            }
+
+            return "-2333";
+        }
+
+
+        public void addCoin(string name, string addCoin_)
+        {
+
+            int addCoin = Convert.ToInt32(addCoin_);
+
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "UPDATE usr SET coin= coin+@addCoin WHERE name = @name;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@addCoin", addCoin);
+            instUsr.Parameters.AddWithValue("@name", name);
+            instUsr.ExecuteNonQuery();
+        }
+
+        public void addExp(string name, string addExp_)
+        {
+
+            int addExp = Convert.ToInt32(addExp_);
+
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "UPDATE usr SET exp= exp+@addExp WHERE name = @name;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@addExp", addExp);
+            instUsr.Parameters.AddWithValue("@name", name);
+            instUsr.ExecuteNonQuery();
+        }
+
 
         /*
          * string getallTsk()
          * 
-         * input msg is actually a inputMessage(I will do deserialize part): 
+         *input msg is actually a inputMessage(I will do deserialize part): 
          * way: "getallTsk"
-         * 
-         * 
-         * 
          * output msg(string)
          *   
          * success: True (connect Success) / False (connect doesn't success)
-         * ErrorMessage (if False) : will have the reason why it is false; 
+         * ErrorMessage (if False) : will have the reason why it is false); 
          * lst (if success)  : lst["id"] = a dictionary: {"id":"#", "title":"X", "content":"XXX", "coin": "#" , "exp":"XX", "owner":"XX"}
          *     (False : null):
          */
         public string getallTsk(string msg)
         {
-            inputMessage input = JsonConvert.DeserializeObject<inputMessage>(msg);
+            inputMessage input = new inputMessage(msg);
             outputMessage output = new outputMessage();
             MySqlConnection sqlConn = GetSqlConn();
             try
@@ -564,9 +685,9 @@ namespace DB_test02
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                output.ErrorMessage = "searchUsr: Connection between mysql doesn't work correctly";
-                output.success = false;
-                return JsonConvert.SerializeObject(output);
+                output.addErrorMsg("addUsr: Connection between mysql doesn't work correctly");
+                output.addSuccess(false);
+                return output.getString();
             }
 
 
@@ -576,7 +697,7 @@ namespace DB_test02
                 MySqlCommand sqlComm = new MySqlCommand(strsql, sqlConn);
                 MySqlDataReader sqlRes = sqlComm.ExecuteReader();
 
-                output.success = true;
+                output.addSuccess(true);
 
                 while (sqlRes.Read())
                 {
@@ -588,13 +709,16 @@ namespace DB_test02
                     string exp = sqlRes["exp"].ToString();
 
 
-                    output.lst[id] = new Dictionary<string, string>();
-                    output.lst[id]["id"] = id;
-                    output.lst[id]["title"] = title;
-                    output.lst[id]["content"] = content;
-                    output.lst[id]["coin"] = coin;
-                    output.lst[id]["exp"] = exp;
-                    output.lst[id]["owner"] = owner;
+                    var lst = new Dictionary<string, string>();
+                    lst["id"] = id;
+                    lst["title"] = title;
+                    lst["content"] = content;
+                    lst["coin"] = coin;
+                    lst["exp"] = exp;
+                    lst["owner"] = owner;
+
+
+                    output.addResult(lst);
                 }
             }
             catch (Exception ex)
@@ -604,14 +728,86 @@ namespace DB_test02
                 Console.Write("getTsk  may can not work");
                 Console.Write(ex.Message);
 
-                output.success = false;
-                output.ErrorMessage = "have problem in getallTsk";
+                output.addSuccess(false);
+                output.addErrorMsg("have problem in getallTsk");
             }
-            return JsonConvert.SerializeObject(output);
+            return output.getString();
+        }
+
+        /// <summary>
+        /// go to find the tasks you have accepted.
+        /// Input: argument must have "taker".
+        /// Output: Outputmessage, Results are dictionary, each subDictionary is a detailed information for each dictionary
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <returns></returns>
+        public string getAcceptedTsk(string msg)
+        {
+            inputMessage input = new inputMessage(msg);
+            outputMessage output = new outputMessage();
+            MySqlConnection sqlConn = GetSqlConn();
+            try
+            {
+                sqlConn.Open();
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                output.addErrorMsg("getOwnedTsk: Connection between mysql doesn't work correctly");
+                output.addSuccess(false);
+                return output.getString();
+            }
+
+            string taker = input.getArg("taker");
+
+            try
+            {
+                String strsql = "SELECT * FROM taker = @taker ;";
+                MySqlCommand sqlComm = new MySqlCommand(strsql, sqlConn);
+                sqlComm.Parameters.AddWithValue("@taker", taker);
+
+                MySqlDataReader sqlRes = sqlComm.ExecuteReader();
+
+                output.addSuccess(true);
+
+                while (sqlRes.Read())
+                {
+                    string id = sqlRes["id"].ToString();
+                    string title = sqlRes["title"].ToString();
+                    string content = (string)sqlRes["content"];
+                    string owner = (string)sqlRes["owner"];
+                    string coin = sqlRes["coin"].ToString();
+                    string exp = sqlRes["exp"].ToString();
+
+
+                    var lst = new Dictionary<string, string>();
+                    lst["id"] = id;
+                    lst["title"] = title;
+                    lst["content"] = content;
+                    lst["coin"] = coin;
+                    lst["exp"] = exp;
+                    lst["owner"] = owner;
+
+
+                    output.addResult(lst);
+                }
+            }
+            catch (Exception ex)
+            {
+                sqlConn.Close();
+                Console.Write("getAcceptedTsk may can not work");
+                Console.Write(ex.Message);
+                output.addSuccess(false);
+                output.addErrorMsg("have problem in getAcceptedTsk");
+            }
+            return output.getString();
         }
 
 
-        //TODO: Import decide ADDUSR and ADDTSK's return value 
+
+
+
         /*
          * string addTsk(string msg)
          * 
@@ -627,13 +823,12 @@ namespace DB_test02
          * output msg(string)
          * 
          * success: True (add Success) / False (add doesn't success)
-         * ErrorMessage (if False) : will have the reason why it is false; 
-         * lst (if success)  : lst["result"] = a dictionary: {"id":"#", "content":"XX", "content":"XX", "coin": "#" , "owner":"XXX"}
-         *     (False : null):
+         * ErrorMessage (if False) : will have the reason why it is false); 
+         *
          */
         public string addTsk(string msg)
         {
-            inputMessage input = JsonConvert.DeserializeObject<inputMessage>(msg);
+            inputMessage input = new inputMessage(msg);
             outputMessage output = new outputMessage();
             MySqlConnection sqlConn = GetSqlConn();
             try
@@ -644,31 +839,31 @@ namespace DB_test02
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                output.ErrorMessage = "addTsk: Connection between mysql doesn't work correctly";
-                output.success = false;
-                return JsonConvert.SerializeObject(output);
+                output.addErrorMsg("addUsr: Connection between mysql doesn't work correctly");
+                output.addSuccess(false);
+                return output.getString();
             }
 
             string title, content, owner;
-            int coin; 
+            int coin;
 
             try
             {
-                title = input.argument["title"];
-                content = input.argument["content"];
-                coin = Convert.ToInt32(input.argument["coin"]) ;
-                owner = input.argument["owner"];
+                title = input.getArg("title");
+                content = input.getArg("content");
+                coin = Convert.ToInt32(input.getArg("coin"));
+                owner = input.getArg("owner");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                output.ErrorMessage = "addTsk: Invalid input please re-enter";
-                output.success = false;
-                return JsonConvert.SerializeObject(output);
+                output.addErrorMsg("addTsk: Invalid input please re-enter");
+                output.addSuccess(false);
+                return output.getString();
             }
 
             try
             {
-                String strUsr = "INSERT tsk(title , content, coin, owner) VALUES (@title, @content, @coin, @owner);";
+                String strUsr = "INSERT tsk(title , content, coin, owner) VALUES (@title, @content, @coin, @owner;";
                 MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
                 instUsr.Parameters.AddWithValue("@title", title);
                 instUsr.Parameters.AddWithValue("@content", content);
@@ -678,19 +873,27 @@ namespace DB_test02
                 sqlConn.Close();
 
 
-                output.success = true;
+                output.addSuccess(true);
             }
             catch (Exception ex)
             {
                 sqlConn.Close();
                 Console.WriteLine("INSERT INTO Tsk may can not work");
                 Console.WriteLine(ex.ToString());
-                output.success = false;
-                output.ErrorMessage = "INSERT INTO Tsk may can not work";
+                output.addSuccess(false);
+                output.addErrorMsg("INSERT INTO Tsk may can not work");
             }
-            return JsonConvert.SerializeObject(output);
+            return output.getString();
         }
 
+        /// <summary>
+        /// Helper Function: which help use title, content, to find the id. 
+        /// </summary>
+        /// <param name="title"></param>
+        /// <param name="content"></param>
+        /// <param name="owner"></param>
+        /// <param name="coin"></param>
+        /// <returns></returns>
         public int find_id(string title, string content, string owner, int coin)
         {
             MySqlConnection sqlConn = GetSqlConn();
@@ -703,36 +906,35 @@ namespace DB_test02
             instUsr.Parameters.AddWithValue("@owner", owner);
 
             MySqlDataReader sqlRes = instUsr.ExecuteReader();
-            
+
             while (sqlRes.Read())
             {
                 int id = (int)sqlRes["id"];
-                return id; 
+                return id;
             }
 
-            return -1; 
+            return -1;
         }
 
+
         /*
-         * string takeTsk(string msg)
-         * 
-         * input msg is actually a inputMessage(I will do deserialize part): 
-         * way: "takeTsk"
-         * argument [it is a dictionary]:
-         *  key(string) : value(string)
-         *  "id"        : "XXXX"
-         *  "taker"     : "nibaba"
-         * 
-         * output msg(string)
-         * 
-         * success: True (take Success) / False (take doesn't success)
-         * ErrorMessage (if False) : will have the reason why it is false; 
-         * lst (if success)  : lst["result"] = a dictionary: {"id":"#", "content":"XX", "title":"XX", "coin": "#" , "owner":"XXX", "taker": "XXXXX"}
-         *     (False : null):
-         */
+             * string takeTsk(string msg)
+             * 
+             * input msg is actually a inputMessage(I will do deserialize part): 
+             * way: "takeTsk"
+             * argument [it is a dictionary]:
+             *  key(string) : value(string)
+             *  "id"        : "XXXX"
+             *  "taker"     : "nibaba"
+             * 
+             * output msg(string)
+             * 
+             * success: True (take Success) / False (take doesn't success)
+             * ErrorMessage (if False) : will have the reason why it is false); 
+             */
         public string takeTsk(string msg)
         {
-            inputMessage input = JsonConvert.DeserializeObject<inputMessage>(msg);
+            inputMessage input = new inputMessage(msg);
             outputMessage output = new outputMessage();
             MySqlConnection sqlConn = GetSqlConn();
             try
@@ -743,13 +945,23 @@ namespace DB_test02
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                output.ErrorMessage = "take: Connection between mysql doesn't work correctly";
-                output.success = false;
-                return JsonConvert.SerializeObject(output);
+                output.addErrorMsg("takeTsk: Connection between mysql doesn't work correctly");
+                output.addSuccess(false);
+                return output.getString();
             }
 
-            int id = Convert.ToInt32(input.argument["id"]) ;
-            string taker = input.argument["taker"];
+            int id = Convert.ToInt32(input.getArg("id"));
+            string taker = input.getArg("taker");
+
+            string owner = getOwner8id(id.ToString());
+            if (owner.Equals(taker))
+            {
+                output.addSuccess(false);
+                output.addErrorMsg("you can not take your own task");
+                return output.getString();
+            }
+
+
 
 
             try
@@ -762,20 +974,142 @@ namespace DB_test02
                 instUsr.ExecuteNonQuery();
                 sqlConn.Close();
 
-                output.success = true;
+                output.addSuccess(true);
             }
             catch (Exception ex)
             {
                 sqlConn.Close();
                 Console.WriteLine("UPDATE tsk taker may can not work");
                 Console.WriteLine(ex.ToString());
-                output.success = false;
-                output.ErrorMessage = "UPDATE tsk taker may can not work";
+                output.addSuccess(false);
+                output.addErrorMsg("UPDATE tsk taker may can not work");
             }
-            return JsonConvert.SerializeObject(output);
+            return output.getString();
+        }
+
+        /// <summary>
+        /// get coin and exp from db by its id. 
+        /// </summary>
+        /// <param name="strId"></param>
+        /// <returns></returns>
+        public Tuple<int, int> getTsk8id(string strId)
+        {
+            int id = Convert.ToInt32(strId);
+
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "SELECT * FROM tsk WHERE id = @id;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@id", id);
+
+
+            MySqlDataReader sqlRes = instUsr.ExecuteReader();
+            int coin = -1;
+            int exp = -1;
+
+
+            while (sqlRes.Read())
+            {
+                coin = (int)sqlRes["coin"];
+                exp = (int)sqlRes["exp"];
+            }
+            return new Tuple<int, int>(coin, exp);
+        }
+
+        public string getOwner8id(string strId)
+        {
+            int id = Convert.ToInt32(strId);
+
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "SELECT owner FROM tsk WHERE id = @id;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@id", id);
+
+
+            MySqlDataReader sqlRes = instUsr.ExecuteReader();
+            String owner = "None";
+
+            while (sqlRes.Read())
+            {
+                owner = (String)sqlRes["owner"];
+            }
+            return owner;
+        }
+
+        public string getDetailsTsk(string id_)
+        {
+            return "hello";
+
+        }
+
+        /// <summary>
+        /// delete the Tsk by id from DB  
+        /// </summary>
+        /// <param name="strId">strId you need to delete</param>
+        public void deleteTsk(string strId)
+        {
+            int id = Convert.ToInt32(strId);
+
+            MySqlConnection sqlConn = GetSqlConn();
+            sqlConn.Open();
+            String strUsr = "DELETE FROM tsk WHERE id = @id;";
+            MySqlCommand instUsr = new MySqlCommand(strUsr, sqlConn);
+            instUsr.Parameters.AddWithValue("@id", id);
+            instUsr.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Finish tsk: Delete the Tsk from the TSk DB, and add the coin and exp to the users
+        /// </summary>
+        /// <param name="msg">inputMessage: getWay = "finishTsk" and arugment: "name","id"(tskid)</param>
+        /// <returns>string(outputMessage)</returns>
+        public string finishTsk(string msg)
+        {
+            inputMessage input = new inputMessage(msg);
+            outputMessage output = new outputMessage();
+            MySqlConnection sqlConn = GetSqlConn();
+            try
+            {
+                sqlConn.Open();
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                output.addErrorMsg("takeTsk: Connection between mysql doesn't work correctly");
+                output.addSuccess(false);
+                return output.getString();
+            }
+
+            string taker = input.getArg("name");
+            string id_ = input.getArg("id");
+            int id = Convert.ToInt32(id_);
+            string owner = getOwner8id(id_);
+
+            Tuple<int, int> CoinExp = getTsk8id(id_);
+            int coin = CoinExp.Item1;
+            int exp = CoinExp.Item2;
+
+            addCoin(taker, coin.ToString());
+            addCoin(owner, (0 - coin).ToString());
+            addExp(taker, exp.ToString());
+            deleteTsk(id_);
+
+            output.addSuccess(true);
+            return output.getString();
         }
 
 
+
+
+
+
+      
+
     }
+
+
+
 
 }
